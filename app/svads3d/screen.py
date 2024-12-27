@@ -22,7 +22,7 @@ class OverlapGroundMesh:
     @param uv1: 网格点在相机 1 的图像中的 uv 坐标
     @param w:   网格点上的图像在相机 0 中的权重
     """
-    mesh : list[TriangleMesh] = None
+    mesh : list = None
     cam0 : int = None
     cam1 : int = None
     uv0  : np.ndarray = None
@@ -44,7 +44,7 @@ class OverlapEllipsoidMesh:
     @param uv1: 网格点在相机 1 的图像中的 uv 坐标
     @param w:   网格点上的图像在相机 0 中的权重
     """
-    mesh : list[TriangleMesh] = None
+    mesh : list = None
     cam0 : int = None
     cam1 : int = None
     didx0: np.ndarray = None
@@ -63,7 +63,7 @@ class NonOverlapGroundMesh:
     @param cam: 相机
     @param uv: 网格点在相机的图像中的 uv 坐标
     """
-    mesh : list[TriangleMesh] = None
+    mesh : list = None
     cam  : int = None
     uv   : np.ndarray = None
 
@@ -77,7 +77,7 @@ class NonOverlapEllipsoidMesh:
     @param dval: 狄利克雷边界条件的节点值
     @param uv: 网格点在相机的图像中的 uv 坐标
     """
-    mesh : list[TriangleMesh] = None
+    mesh : list = None
     cam  : int = None
     didx : np.ndarray = None
     dval : np.ndarray = None

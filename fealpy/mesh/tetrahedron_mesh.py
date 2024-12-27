@@ -21,6 +21,9 @@ class TetrahedronMeshDataStructure(Mesh3dDataStructure):
        (2, 0, 1, 3), (2, 1, 3, 0), (2, 3, 0, 1),
        (3, 0, 2, 1), (3, 2, 1, 0), (3, 1, 0, 2)])
 
+    NEC = 6
+    NFC = 4
+    NVF = 3
 
     def face_to_edge_sign(self):
         face2edge = self.face_to_edge()

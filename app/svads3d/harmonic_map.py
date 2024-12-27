@@ -7,7 +7,7 @@ from fealpy.mesh import TriangleMesh
 from fealpy.functionspace import LagrangeFESpace
 
 from fealpy.fem import BilinearForm
-from fealpy.fem import VectorDiffusionIntegrator
+from fealpy.fem import VectorDiffusionIntegrator, ScalarDiffusionIntegrator
 
 @dataclass
 class HarmonicMapData:
@@ -41,8 +41,24 @@ def sphere_harmonic_map(data : HarmonicMapData):
 
     bform = BilinearForm((space, )*GD)
     bform.add_domain_integrator(VectorDiffusionIntegrator())
+
     S = bform.assembly() # 刚度矩阵
     SS = S.copy()
+
+    bform = BilinearForm(space)
+    bform.add_domain_integrator(ScalarDiffusionIntegrator())
+    SS0 = bform.assembly()
+
+    idx = np.arange(gdof).reshape(-1, GD)
+    idx = idx.T.flatten()
+    P = csr_matrix((np.ones(gdof), (idx, np.arange(gdof))), 
+                   shape=(gdof, gdof))
+    if GD == 2:
+        SS1 = bmat([[SS0, None], [None, SS0]], format='csr')
+    elif GD == 3:
+        SS1 = bmat([[SS0, None, None], [None, SS0, None], [None, None, SS0]],
+                   format='csr')
+    SS1 = P@SS1@P.T
 
     # 1. 计算初值
     ## 1.1 狄利克雷边界条件处理

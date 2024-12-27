@@ -45,6 +45,7 @@ class DartMesh3d():
         NFC = mesh.ds.NFC
         NVF = mesh.ds.NVF
 
+
         ND = 2*NEC*NC
         dart = -np.ones([ND, 7], dtype=np.int_)
 

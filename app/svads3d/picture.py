@@ -31,7 +31,6 @@ class Picture():
         @param data: 相关数据，包括图片信息。
         """
         self.pic_folder = data_path+pic_folder if pic_folder is not None else None 
-        print("###########################pic_folder: ", self.pic_folder)
         self.data_path = data_path
         self.fname = data_path+"camera_inputs/"+fname
         #self.fname = data_path+fname
@@ -48,7 +47,7 @@ class Picture():
         self.rho2theta = None
 
 
-    def add_feature_point(self, feature_point: Union[list[np.ndarray], np.ndarray, list]):
+    def add_feature_point(self, feature_point: Union[np.ndarray, list]):
         """
         手动添加特征点。
         @param feature_point: 特征点。
@@ -76,7 +75,7 @@ class Picture():
         @return: 映射后的相机坐标系下的点坐标。
         """
         assert self.camera is not None, "相机未初始化！"
-        if type(args[0]) in [list[np.ndarray], np.ndarray, list]:
+        if type(args[0]) in [np.ndarray, list]:
             point = np.array(args[0])
             NN = len(point)
 

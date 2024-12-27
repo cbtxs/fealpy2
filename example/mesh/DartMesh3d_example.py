@@ -5,7 +5,7 @@ import numpy as np
 from fealpy.geometry import CuboidDomain
 from fealpy.geometry import huniform
 
-from fealpy.mesh import DartMesh3d, TetrahedronMesh, MeshFactory
+from fealpy.mesh import DartMesh3d, TetrahedronMesh
 from fealpy.mesh import DistMesher3d 
 
 def fh(p, *args):
@@ -18,16 +18,16 @@ def fh(p, *args):
     return h
 
 maxit = 1000
-hmin = 0.1
+hmin = 0.2
 domain = CuboidDomain()
 
 mesher = DistMesher3d(domain, hmin, output=True)
 mesh = mesher.meshing(maxit)
 mesh = DartMesh3d.from_mesh(mesh)
-mesh.celldata['cidx'] = np.arange(mesh.number_of_cells())
+#mesh.celldata['cidx'] = np.arange(mesh.number_of_cells())
 mesh.to_vtk(fname='cube.vtu')
 
 mesh = mesh.dual_mesh(dual_point='circumcenter')
-mesh.celldata['cidx'] = np.arange(mesh.number_of_cells())
+#mesh.celldata['cidx'] = np.arange(mesh.number_of_cells())
 mesh.to_vtk(fname='dual.vtu')
 

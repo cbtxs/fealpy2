@@ -275,6 +275,42 @@ class OpenGLPlotter:
         image = Image.fromarray(img_data)
         image.save(file_path)
 
+    def run_pic(self):
+        """
+        @brief 
+        """
+        while not glfw.window_should_close(self.window):
+            glfw.poll_events()
+            
+            # 清除颜色缓冲区和深度缓冲区
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+            glClearColor(*self.bgColor)
+
+            self._bind_uinform(self.mix_shader_program)
+            self._bind_uinform(self.general_shader_program)
+
+            # 只显示背面
+            glEnable(GL_CULL_FACE)
+            glCullFace(GL_BACK)
+            #glCullFace(GL_FRONT)
+
+            for mesh in self.meshes:
+                mesh.draw(self.mode)
+
+            # 关闭深度测试，确保坐标轴总是绘制在最前面
+            # glDisable(GL_DEPTH_TEST)
+
+            # 渲染坐标轴
+            # self.coordinate_axes.render(self.projection, view_for_axes, np.identity(4))
+
+            # 重新启用深度测试
+            # glEnable(GL_DEPTH_TEST)
+
+            glfw.swap_buffers(self.window)
+
+        glfw.terminate()
+
+
     def run(self):
         """
         @brief 
