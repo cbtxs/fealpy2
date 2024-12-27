@@ -99,6 +99,48 @@ class DartMesh3d():
         mesh =  cls(node, dart)
         return mesh
 
+    @classmethod
+    def from_polyhedron_mesh(cls, node, face, face2cell, cell2face):
+        """!
+        @brief 输入一个多面体网格，将其转化为 dart 数据结构。
+        @param node : 节点坐标
+        @param face : 面的节点编号
+        @param face2cell : 面的相邻单元编号
+        @param cell2face : 单元的面编号
+        """
+        NF = len(face)
+        NC = len(cell)
+        NN = len(node)
+
+        nNoF = np.array([len(f) for f in face], dtype=np.int_) # 每个面的节点数
+        nFoC = np.array([len(f) for f in cell], dtype=np.int_) # 每个单元的面数
+
+        N = np.sum([len(f) for f in face])
+        alledge = np.zeros([N, 2], dtype=np.int_)
+        alledge[:, 0] = face.flat
+        alledge[:, 1] = np.array([np.roll(f, -1) for f in face], dtype=np.int_)
+
+        sortedge = np.sort(alledge, axis=1)
+        edge, i0, i1 = np.unique(sortedge, return_index=True, return_inverse=True, axis=0)
+
+        face2edge = np.split(i1, nNoF)
+
+        isBdface = face2cell[:, 0] == face2cell[:, 1]
+        ND = nNof[~isBdface].sum()*2 + nNof[isBdface].sum()
+        dart = -np.ones([ND, 7], dtype=np.int_)
+        nd = 0
+        for nv, fv, fe, fc, flag in zip(nNoF, face, face2edge, face2cell, isBdface):
+            dart[nd:nd+nv, 0] = fv
+            dart[nd:nd+nv, 1] = fe
+            dart[nd:nd+nv, 2] = np.arange(NF)
+            dart[nd:nd+nv, 3] = fc[0]
+            dart[nd:nd+nv, 4] = np.arange(nv)
+            dart[nd:nd+nv, 5] = np.arange(nv)
+            dart[nd:nd+nv, 6] = np.arange(nv)
+        return mesh
+
+
+
     def dual_mesh(self, dual_point='barycenter'):
         dart = self.ds.dart
         node = self.node
@@ -791,6 +833,12 @@ class DartMeshDataStructure():
 
     def boundary_cell_index(self):
         return np.where(self.boundary_cell_flag())[0]
+
+
+
+
+
+
 
 
 
