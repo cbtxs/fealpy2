@@ -135,11 +135,11 @@ class DartMesh3d():
             dart[nd:nd+nv, 2] = np.arange(NF)
             dart[nd:nd+nv, 3] = fc[0]
             dart[nd:nd+nv, 4] = np.arange(nv)
-            dart[nd:nd+nv, 5] = np.arange(nv)
             dart[nd:nd+nv, 6] = np.arange(nv)
+
+        
+        for i in range()
         return mesh
-
-
 
     def dual_mesh(self, dual_point='barycenter'):
         dart = self.ds.dart
