@@ -2,7 +2,7 @@ import numpy as np
 from ..common.Tools import angle
 
 class DartMesh3d():
-    def __init__(self, node, dart):
+    def __init__(self, node, dart): 
         """!
         @param dart : (v, e, f, c, b1, b2, b3)
         """
@@ -99,8 +99,52 @@ class DartMesh3d():
         mesh =  cls(node, dart)
         return mesh
 
+    def read_polyhedron_mesh_file(filename):
+        """
+        @brief 读取 polyhedron 文件
+        @return vertices : 节点坐标
+        @return faces : 面的节点编号
+        @return face2cell : 面的相邻单元编号
+        @return cells : 单元的面编号
+        """
+        with open(filename, 'r') as file:
+            # 1. 读取节点数量、面数量和单元数量
+            num_nodes, num_faces, num_cells = map(int, file.readline().split())
+
+            # 2. 读取节点数据
+            vertices = []
+            for _ in range(num_nodes):
+                vertices.append(list(map(float, file.readline().split())))
+            vertices = np.array(vertices)
+
+            file.readline()
+
+            # 3. 读取面数据
+            faces = []
+            face2cell = []
+            for _ in range(num_faces):
+                face_data = np.array(list(map(int, file.readline().split())))
+                num_vertices_in_face = face_data[0]
+                face = face_data[1:num_vertices_in_face+1]-1
+                adjacent_cells = face_data[num_vertices_in_face+1:]-1
+                faces.append(face)
+                face2cell.append(adjacent_cells)
+
+            file.readline()
+
+            # 4. 读取单元数据
+            cells = []
+            for _ in range(num_cells):
+                cell_data = np.array(list(map(int, file.readline().split())))
+                num_faces_in_cell = cell_data[0]
+                cell_faces = cell_data[1:num_faces_in_cell+1]-1
+                cells.append(cell_faces)
+
+        return vertices, faces, np.array(face2cell), cells
+
+
     @classmethod
-    def from_polyhedron_mesh(cls, node, face, face2cell, cell2face):
+    def from_polyhedron_mesh(cls, node, face, face2cell): 
         """!
         @brief 输入一个多面体网格，将其转化为 dart 数据结构。
         @param node : 节点坐标
@@ -108,37 +152,87 @@ class DartMesh3d():
         @param face2cell : 面的相邻单元编号
         @param cell2face : 单元的面编号
         """
-        NF = len(face)
-        NC = len(cell)
+
         NN = len(node)
-
+        NF = len(face)
         nNoF = np.array([len(f) for f in face], dtype=np.int_) # 每个面的节点数
-        nFoC = np.array([len(f) for f in cell], dtype=np.int_) # 每个单元的面数
 
+        # 生成边
         N = np.sum([len(f) for f in face])
         alledge = np.zeros([N, 2], dtype=np.int_)
-        alledge[:, 0] = face.flat
-        alledge[:, 1] = np.array([np.roll(f, -1) for f in face], dtype=np.int_)
+        alledge[:, 0] = np.concatenate([np.roll(f, 1) for f in face])
+        alledge[:, 1] = np.concatenate(face)
 
         sortedge = np.sort(alledge, axis=1)
         edge, i0, i1 = np.unique(sortedge, return_index=True, return_inverse=True, axis=0)
 
-        face2edge = np.split(i1, nNoF)
+        face2edge = np.split(i1, np.cumsum(nNoF)[:-1])
 
         isBdface = face2cell[:, 0] == face2cell[:, 1]
-        ND = nNof[~isBdface].sum()*2 + nNof[isBdface].sum()
+        print("SSSSSSSSSSSSSSSSSSSSSSSs : ", isBdface[208])
+        ND = nNoF[~isBdface].sum()*2 + nNoF[isBdface].sum()
         dart = -np.ones([ND, 7], dtype=np.int_)
         nd = 0
-        for nv, fv, fe, fc, flag in zip(nNoF, face, face2edge, face2cell, isBdface):
+        for fidx, (nv, fv, fe, fc, flag) in enumerate(zip(nNoF, face, face2edge, face2cell, isBdface)):
+            # 每个面相邻两个单元
             dart[nd:nd+nv, 0] = fv
             dart[nd:nd+nv, 1] = fe
-            dart[nd:nd+nv, 2] = np.arange(NF)
+            dart[nd:nd+nv, 2] = fidx
             dart[nd:nd+nv, 3] = fc[0]
-            dart[nd:nd+nv, 4] = np.arange(nv)
-            dart[nd:nd+nv, 6] = np.arange(nv)
+            dart[nd:nd+nv, 4] = np.roll(np.arange(nd, nd+nv), -1)
+            dart[nd:nd+nv, 6] = np.arange(nd+nv, nd+nv*2)
+            nd += nv
+            if ~flag: # 另一个单元的 dart
+                dart[nd:nd+nv, 0] = np.roll(fv, 1)
+                dart[nd:nd+nv, 1] = fe
+                dart[nd:nd+nv, 2] = fidx
+                dart[nd:nd+nv, 3] = fc[1]
+                dart[nd:nd+nv, 4] = np.roll(np.arange(nd, nd+nv), 1)
+                dart[nd:nd+nv, 6] = np.arange(nd-nv, nd) 
+                nd += nv
 
-        
-        for i in range()
+        from .polygon_mesh import PolygonMesh
+        from .halfedge_mesh import HalfEdgeMesh2d
+        bface = []
+        kkk = 0
+        for i, f in enumerate(face):
+            if isBdface[i]:
+                if i == 208:
+                    print(" 208 : ", f)
+                    print("kkk, ", kkk)
+                bface.append(f)
+                kkk += 1
+
+        isbdnode = np.zeros(NN, dtype=np.bool_)
+        isbdnode[np.concatenate(bface)] = True
+
+        nidxmap = np.zeros(NN, dtype=np.int_)
+        nidxmap[isbdnode] = np.arange(isbdnode.sum())
+        print("NBD : ", isBdface.sum())
+
+        bface = [nidxmap[f] for f in bface]
+        #print(len(np.concatenate(bface)))
+        #for i, f in enumerate(bface):
+        #    print(i, len(f), f)
+
+        surfacemesh = PolygonMesh(node[isbdnode], bface)
+        surfacemesh = HalfEdgeMesh2d.from_mesh(surfacemesh)
+        surfacemesh.celldata['num'] = np.arange(len(bface))
+        surfacemesh.to_vtk('surface.vtu')
+
+        dartv0v1 = np.zeros([ND, 3], dtype=np.int_)
+        dartv0v1[:, 0] = dart[:, 3]
+        dartv0v1[:, 1] = dart[:, 0]
+        dartv0v1[dart[:, 4], 2] = dart[:, 0]
+        dartv0v1[:, 1:] = np.sort(dartv0v1[:, 1:], axis=1)
+
+
+        idx = np.argsort(dartv0v1, axis=0)
+        ddd, idx = np.unique(dartv0v1, return_inverse=True, axis=0)
+        dart[idx[::2], 5] = idx[1::2]
+        dart[idx[1::2], 5] = idx[::2]
+
+        mesh =  cls(node, dart)
         return mesh
 
     def dual_mesh(self, dual_point='barycenter'):
@@ -604,6 +698,12 @@ class DartMeshDataStructure():
     def __init__(self, dart):
         """!
         @brief hcell, hface, hedge 给出了 cell, face, edge 的定向
+        @param dart: dart 的拓扑结构
+                     (v, e, f, c, b1, b2, b3)
+                     其中 v, e, f, c 分别是 dart 的顶点, 边, 面, 单元
+                     b1 是 dart 的同一个面同一个单元的下一个 dart
+                     b2 是 dart 的同一个单元同一条边的 dart 
+                     b3 是同一个面同一条边但是不同单元的 dart
         """
         self.dart = dart
         ND = dart.shape[0]
@@ -618,6 +718,11 @@ class DartMeshDataStructure():
         self.hedge[dart[:, 1]] = np.arange(ND) 
         self.hface[dart[:, 2]] = np.arange(ND)  
         self.hcell[dart[:, 3]] = np.arange(ND) 
+
+        self.nNoF = None
+        self.nNoC = None
+        self.nEoC = None
+        self.nFoC = None
 
     def cell_to_face(self, index=np.s_[:]):
         cf = self.dart[:, [3, 2]]
@@ -720,7 +825,7 @@ class DartMeshDataStructure():
             isNotOK = idx < f2nLocation[1:]
         return f2n, f2nLocation
 
-    def face_to_cell(self):
+    def face_to_cell(self, cell2face, cell2faceLoc):
         """!
         @brief 获取面相邻的单元的编号 [c0, c1, c0中局部编号, c1中局部编号]
         """
@@ -732,8 +837,6 @@ class DartMeshDataStructure():
         f2c = -np.ones([NF, 4], dtype=np.int_)
         f2c[:, 0] = dart[hface, 3]
         f2c[:, 1] = dart[dart[hface, 6], 3]
-
-        cell2face, cell2faceLoc = self.cell_to_face()
 
         i = 0
         c = np.arange(NC)

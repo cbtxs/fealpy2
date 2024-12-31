@@ -108,8 +108,15 @@ class HalfEdgeMesh2d(Mesh, Plotable):
             NE = mesh.number_of_edges()
             NBE = mesh.ds.boundary_edge_flag().sum()
             NHE = NE*2 - NBE # 半边数, NHE - NBE 为内部边的个数的二倍
-
             node = mesh.entity('node')
+
+            tcell = np.array([c[:3] for c in mesh.entity('cell')], dtype=np.int_)
+            v0 = node[tcell[:, 1]] - node[tcell[:, 0]]
+            v1 = node[tcell[:, 2]] - node[tcell[:, 0]]
+            area = np.sum(np.cross(v0, v1)*node[tcell[:, 0]], axis=1)
+            flag = area<0
+            print("flag : ", flag)
+
             edge = mesh.entity('edge')
             edge2cell = mesh.ds.edge_to_cell()
 
@@ -120,6 +127,8 @@ class HalfEdgeMesh2d(Mesh, Plotable):
             halfedge = np.zeros((NHE, 5), dtype=mesh.itype)
             halfedge[:NHE-NBE, 0] = edge[isInEdge].flat
             halfedge[NHE-NBE:, 0] = edge[isBdEdge, 1]
+
+            a = halfedge[:, 0].copy()
 
             halfedge[0:NHE-NBE:2, 1] = edge2cell[isInEdge, 1]
             halfedge[1:NHE-NBE:2, 1] = edge2cell[isInEdge, 0]
@@ -143,7 +152,30 @@ class HalfEdgeMesh2d(Mesh, Plotable):
             halfedge[idx[idx0], 2] = idx[idx1]
             halfedge[idx[idx1], 3] = idx[idx0]
 
+            nex = halfedge[:, 2]
+            pre = halfedge[:, 3]
+            falg = halfedge[nex, 0] == halfedge[:, 0]
+
+            cell0 = mesh.entity('cell')
+            c2e0 = mesh.ds.cell_to_edge()
             mesh =  cls(node, halfedge, NC=NC, NV=NV)
+            c2e, c2el = mesh.ds.cell_to_edge()
+            c2e = np.split(c2e, c2el[1:-1])
+            cell = mesh.entity('cell')
+            for i in range(mesh.number_of_cells()):
+                print(i, " : ", c2e[i], cell[i], cell0[i], c2e0[i])
+            print(edge[6])
+            print(edge[33])
+
+            eidx = [3, 57]
+            hidx = [6, 7, 114, 115]
+            for i in hidx:
+                print(i, " : ", halfedge[i])
+
+            for i in eidx:
+                print(i, " : ", edge2cell[i], edge[i])
+
+            print("flag : ", np.where(falg)[0])
             return mesh
         else:
             newMesh =  cls(mesh.node.copy(), mesh.ds.halfedge.copy(), NC=NC, NV=mesh.ds.NV)
@@ -167,6 +199,8 @@ class HalfEdgeMesh2d(Mesh, Plotable):
         halfedge = self.ds.halfedge
         v0 = node[halfedge[halfedge[:, 2], 0]] - node[halfedge[:, 0]]
         v1 = node[halfedge[halfedge[:, 3], 0]] - node[halfedge[:, 0]]
+        idx = np.where(np.sum(v0**2, axis=1)<1e-12)[0]
+
         angle = np.sum(v0*v1, axis=1)/np.sqrt(np.sum(v0**2, axis=1)*np.sum(v1**2, axis=1))
         self.halfedgedata['level'][(angle < -0.98)] = 1 
 
